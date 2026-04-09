@@ -1,0 +1,85 @@
+---
+description: EWA Words data model — word structure, translations, linked words
+globs:
+alwaysApply: true
+---
+
+# Words data model
+
+## Word entity
+
+A **Word** is the core entity. Each word belongs to a single `learningLanguage` (the language it is written in). A word can have translations/meanings to multiple languages.
+
+```
+Word
+├── _id (UUID)
+├── origin ("hello", "table", "courir")
+├── nativeLanguage ("en", "fr")
+├── transcription ("həˈləʊ")
+├── audio { _id, url }
+├── frequency (float, higher = more common)
+├── description (English definition)
+├── etymology (word history)
+├── isDeleted (bool)
+│
+├── meanings
+│   └── { lang: { value: [translations], isVerified: bool } }
+│       e.g. { "ru": { "value": ["привет", "алло"], "isVerified": true } }
+│
+├── translations
+│   └── { lang: { pos: "translation" } }
+│       e.g. { "de": { "noun": "Gruß", "interjection": "Hallo" } }
+│
+├── translationList
+│   └── { lang: [ { _id, text, pos, isDefault, isSpecific } ] }
+│       Detailed translations with IDs and flags
+│
+├── examples ["There is dinner on the table."]
+├── localizedExamples
+│   └── [ { _id, origin, translations: { ru: "..." }, wordForm, pos, start, end, audio } ]
+│
+├── synonyms      [ { _id, origin } ]
+├── antonyms      [ { _id, origin } ]
+├── formalSynonyms    [ { _id, origin } ]
+├── informalSynonyms  [ { _id, origin } ]
+│
+└── confusedWords
+    └── { linkedWords: [{_id, origin}], pos, difference: [str], whenToUse: str }
+```
+
+## Key concepts
+
+### Meanings vs Translations
+
+- **`meanings`** — simplified: `{ "ru": { "value": ["стол"], "isVerified": true } }`. Flat list of meaning values per language.
+- **`translations`** — grouped by POS: `{ "de": { "noun": "Tisch", "verb": "tischen" } }`. One string per POS.
+- **`translationList`** — full details: each translation has an `_id`, `text`, `pos`, `isDefault`, `isSpecific`. Use this for precise analysis.
+
+### Determining context / sense of a word
+
+For polysemous words (e.g. "building"), look at `translationList`:
+- `pos: "noun"` → the building (здание)
+- `pos: "verb"` → building something (строительство)
+
+Each sense has `isDefault: true/false` and `isSpecific: true/false` to identify the primary meaning.
+
+### confusedWords
+
+Contains words commonly confused with this one:
+- `linkedWords` — the other words (with IDs so you can look them up)
+- `difference` — array of explanation strings
+- `whenToUse` — guidance on correct usage
+
+### Coverage analysis
+
+To check translation coverage, iterate over `meanings` or `translationList`:
+- Count languages where data exists
+- Check `isVerified` to separate verified from unverified
+- Missing language = no key in the object
+
+### Linking words to exercises (cross-service)
+
+EWA exercises reference words by `_id`. When analyzing course content:
+1. Get exercises via `ewa-courses` tools
+2. Extract word IDs from vocabulary exercise data
+3. Batch-fetch word data via `Get_words_by_IDs`

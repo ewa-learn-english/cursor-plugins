@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "ewa-courses": {
+      "url": "https://mcp.e2w2a.pro/courses-admin-api/mcp"
+    },
+    "ewa-words": {
+      "url": "https://mcp.e2w2a.pro/words/mcp"
+    },
+    "ewa-ai-content": {
+      "url": "https://mcp.e2w2a.pro/ai-content/mcp"
+    },
+    "ewa-audio": {
+      "url": "https://mcp.e2w2a.pro/audio/mcp"
+    }
+  }
+}

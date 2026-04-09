@@ -1,0 +1,21 @@
+{
+  "name": "ewa-courses",
+  "description": "EWA Content Studio — browse courses, look up words, plan units, generate exercises, translate content via MCP",
+  "version": "2.0.0",
+  "author": {
+    "name": "EWA"
+  },
+  "keywords": [
+    "ewa",
+    "courses",
+    "words",
+    "vocabulary",
+    "content-studio",
+    "exercises",
+    "translations",
+    "education",
+    "mcp",
+    "admin"
+  ],
+  "repository": "https://github.com/ewa-learn-english/content-cursor-plugin"
+}

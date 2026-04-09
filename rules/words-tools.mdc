@@ -1,0 +1,290 @@
+---
+description: EWA Words MCP tools reference — when and how to use each tool
+globs:
+alwaysApply: true
+---
+
+# Words API — MCP Tools
+
+MCP server: `ewa-words` → `https://mcp.e2w2a.pro/words/mcp`
+
+All tools use `api_version = "v2"` — always pass this parameter.
+
+## Tools
+
+### Get_word_by_origin
+
+Find a word by its text (origin) and language. The primary search tool.
+
+| Parameter          | Type   | Required | Description                                   |
+|--------------------|--------|----------|-----------------------------------------------|
+| `api_version`      | string | yes      | Always `"v2"`                                 |
+| `origin`           | string | yes      | The word itself: `"hello"`, `"building"`, `"courir"` |
+| `learningLanguage` | string | yes      | Language of the word: `"en"`, `"fr"`, `"de"`  |
+| `sourceLanguage`   | string | no       | User's native language for translation filter |
+
+**When to use:** Finding a word, getting its ID, checking translations, any lookup by word text.
+
+**Examples:**
+- "Дай инфу по слову hello" → `Get_word_by_origin(api_version="v2", origin="hello", learningLanguage="en")`
+- "Дай мне айди слова hello" → same call, return `result._id`
+- "Найди французское слово courir" → `Get_word_by_origin(api_version="v2", origin="courir", learningLanguage="fr")`
+- "Слово building по-английски" → `Get_word_by_origin(api_version="v2", origin="building", learningLanguage="en")`
+- "Как переводится table на русский?" → `Get_word_by_origin(api_version="v2", origin="table", learningLanguage="en", sourceLanguage="ru")`
+- "Дай инфо карточку для слова hello" → same call, present full card (see display format below)
+
+### Get_word_by_ID
+
+Get a word by its UUID. Use when you already have an ID.
+
+| Parameter       | Type   | Required | Description                                   |
+|-----------------|--------|----------|-----------------------------------------------|
+| `api_version`   | string | yes      | Always `"v2"`                                 |
+| `word_id`       | string | yes      | Word UUID (can include translation IDs: `"uuid:tid1:tid2"`) |
+| `sourceLanguage`| string | no       | User's native language for translation filter |
+
+**Examples:**
+- "Дай инфу о слове 580bca1a-0660-4a5a-a601-d92d7994157a" → `Get_word_by_ID(api_version="v2", word_id="580bca1a-0660-4a5a-a601-d92d7994157a")`
+- "Покажи слово из упражнения (word=abc-123)" → `Get_word_by_ID(api_version="v2", word_id="abc-123")`
+
+### Get_words_by_IDs
+
+Get multiple words at once by a list of UUIDs. Batch lookup.
+
+| Parameter       | Type     | Required | Description                                   |
+|-----------------|----------|----------|-----------------------------------------------|
+| `api_version`   | string   | yes      | Always `"v2"`                                 |
+| `wordIds`       | string[] | yes      | Array of word UUIDs                           |
+| `sourceLanguage`| string   | no       | User's native language for translation filter |
+
+**When to use:** When you have multiple word IDs (e.g. from exercises) and need all words at once.
+
+**Examples:**
+- "Покажи все слова из этих упражнений" → collect `exercise.word` IDs, then `Get_words_by_IDs(api_version="v2", wordIds=[...])`
+- "Дай инфу по этим словам: id1, id2, id3" → `Get_words_by_IDs(api_version="v2", wordIds=["id1", "id2", "id3"])`
+
+### Get_confused_words
+
+Find words that are commonly confused with the given word (e.g. affect/effect, there/their).
+
+| Parameter          | Type   | Required | Description                                   |
+|--------------------|--------|----------|-----------------------------------------------|
+| `api_version`      | string | yes      | Always `"v2"`                                 |
+| `origin`           | string | yes      | The word to find confused pairs for           |
+| `learningLanguage` | string | yes      | Language: `"en"`, `"fr"`, etc.                |
+| `sourceLanguage`   | string | no       | User's native language                        |
+
+**When to use:** When user asks about similar/confusing words, or wants to understand the difference.
+
+**Examples:**
+- "Какие слова путают с affect?" → `Get_confused_words(api_version="v2", origin="affect", learningLanguage="en")`
+- "Найди похожие слова на hello" → `Get_confused_words(api_version="v2", origin="hello", learningLanguage="en")`
+- "В чём разница между there и their?" → call for both, check `difference` field
+
+### Generate_localized_example_metadata
+
+Generate metadata (POS, word position, audio) for an example sentence.
+
+| Parameter        | Type   | Required | Description                        |
+|------------------|--------|----------|------------------------------------|
+| `api_version`    | string | yes      | Always `"v2"`                      |
+| `origin`         | string | yes      | The example sentence               |
+| `wordOrigin`     | string | yes      | The target word in the sentence    |
+| `sourceLanguage` | string | yes      | Language of the sentence           |
+
+**When to use:** Analyzing a sentence to find word position, POS, generate audio.
+
+**Examples:**
+- "Проанализируй предложение 'The building is tall' для слова building" → `Generate_localized_example_metadata(api_version="v2", origin="The building is tall", wordOrigin="building", sourceLanguage="en")`
+
+## Word data structure
+
+The response from any word lookup contains:
+
+| Field              | Description                                              |
+|--------------------|----------------------------------------------------------|
+| `_id`              | Word UUID — use this as the word's unique identifier     |
+| `origin`           | The word itself: `"hello"`, `"table"`                    |
+| `nativeLanguage`   | Language the word belongs to: `"en"`                     |
+| `transcription`    | Phonetic transcription: `"həˈləʊ"`                       |
+| `audio.url`        | Pronunciation audio URL                                  |
+| `frequency`        | Usage frequency (higher = more common)                   |
+| `description`      | English definition                                       |
+| `etymology`        | Word origin/history                                      |
+| `meanings`         | Per-language meanings: `{ "ru": { "value": ["привет"], "isVerified": true } }` |
+| `translations`     | Per-language translations by POS: `{ "de": { "noun": "Tisch", "verb": "tischen" } }` |
+| `translationList`  | Detailed translations with IDs, POS, default flag        |
+| `examples`         | Example sentences (English)                              |
+| `localizedExamples`| Examples with translations to all languages              |
+| `synonyms`         | List of synonyms: `[{ "_id": "...", "origin": "hi" }]`  |
+| `antonyms`         | List of antonyms                                         |
+| `formalSynonyms`   | Formal alternatives                                     |
+| `informalSynonyms` | Informal alternatives                                   |
+| `confusedWords`    | Commonly confused words with differences explained       |
+
+## Common use cases
+
+### Get word ID
+User: "Дай мне айди слова hello"
+→ `Get_word_by_origin(api_version="v2", origin="hello", learningLanguage="en")`
+→ Return `result._id` → `580bca1a-0660-4a5a-a601-d92d7994157a`
+
+### Word info card
+User: "Дай мне инфо карточку для слова hello"
+→ `Get_word_by_origin(api_version="v2", origin="hello", learningLanguage="en")`
+→ Display:
+
+```
+hello /həˈləʊ/
+ID: 580bca1a-0660-4a5a-a601-d92d7994157a
+Frequency: 87.22
+
+Definition: a greeting or expression to call attention, often used when
+meeting someone or answering the phone
+
+Translations:
+  ru: здравствуй, здравствуйте, привет (verified)
+  de: Hallo (verified)
+  fr: bonjour, salut (verified)
+  es: hola (verified)
+
+Synonyms: hi, hey, greetings
+Confused with: hi
+
+Examples:
+  1. Hello!
+  2. "We must go and say hello to Mr Macey," said Dolly.
+
+Etymology: Derived from Middle English 'hailo' and 'hollo'...
+```
+
+### Get word by ID
+User: "Дай инфу о слове 580bca1a-0660-4a5a-a601-d92d7994157a"
+→ `Get_word_by_ID(api_version="v2", word_id="580bca1a-0660-4a5a-a601-d92d7994157a")`
+→ Same card format as above
+
+User: "Что за слово с айди 4d318c11-17b1-4f5f-922f-235ef10851b2?"
+→ `Get_word_by_ID(api_version="v2", word_id="4d318c11-17b1-4f5f-922f-235ef10851b2")`
+→ Answer: building
+
+### Translation coverage
+User: "Покажи покрытие переводов для слова building"
+→ `Get_word_by_origin(api_version="v2", origin="building", learningLanguage="en")`
+→ Iterate `meanings` — count languages, check `isVerified`
+
+```
+Покрытие переводов для "building" (4d318c11-17b1-4f5f-922f-235ef10851b2):
+✓ ru: здание (verified)
+✓ de: Gebäude (verified)
+✓ fr: bâtiment (verified)
+✓ es: edificio (verified)
+  ... ещё 37 языков
+Итого: 41/41 языков (100%), все verified
+```
+
+### Word in specific context (POS)
+User: "Покажи слово building в контексте стройки и дай его айди"
+→ `Get_word_by_origin(api_version="v2", origin="building", learningLanguage="en")`
+→ Check `translationList.ru`:
+  - здание (pos=noun, default=true) ← основное значение
+  - строительство (pos=noun, default=false) ← контекст стройки
+→ ID: `4d318c11-17b1-4f5f-922f-235ef10851b2`
+→ Контекст стройки = перевод "строительство"
+
+### Find a foreign language word
+User: "Найди мне французское слово courir"
+→ `Get_word_by_origin(api_version="v2", origin="courir", learningLanguage="fr")`
+→ Result: courir /kuʁiʁ/ — to run, to race (ID: 9065905d-31da-4607-91e1-272a39c5bec8)
+
+User: "Найди любое немецкое слово Haus"
+→ `Get_word_by_origin(api_version="v2", origin="Haus", learningLanguage="de")`
+
+### Missing part of speech
+User: "Покажи слова где нет части речи"
+→ Get words via `Get_words_by_IDs`, check `translationList` entries where `pos` is null/empty.
+→ Example: hello has `translationList.ru` entries with `pos=null` — these are missing POS.
+
+### Confused words / similar words
+User: "Найди английские слова похожие на hello"
+→ `Get_confused_words(api_version="v2", origin="hello", learningLanguage="en")`
+→ Result: hello ↔ hi (2 confused words)
+→ Also get word data: synonyms (hi, hey), informalSynonyms, formalSynonyms
+
+User: "В чём разница между affect и effect?"
+→ `Get_confused_words(api_version="v2", origin="affect", learningLanguage="en")`
+→ Response includes `difference` array:
+  - affect (verb) — to influence something
+  - effect (noun) — the result of a change
+  - Mnemonic: RAVEN — Remember Affect Verb Effect Noun
+
+### Synonyms & antonyms
+User: "Какие синонимы у слова happy?"
+→ `Get_word_by_origin(api_version="v2", origin="happy", learningLanguage="en")`
+→ synonyms: joyful, cheerful, content, elated, glad
+→ formalSynonyms: joyous, delighted, blissful, jubilant, euphoric
+→ informalSynonyms: chipper, giddy
+→ antonyms: sad, unhappy, miserable, depressed, melancholy
+
+### Etymology
+User: "Откуда произошло слово hello?"
+→ `Get_word_by_origin(api_version="v2", origin="hello", learningLanguage="en")`
+→ etymology: "Derived from Middle English 'hailo' and 'hollo', used primarily to call attention."
+
+### Pronunciation
+User: "Как произносится слово building?"
+→ `Get_word_by_origin(api_version="v2", origin="building", learningLanguage="en")`
+→ transcription: ˈbɪldɪŋ
+→ audio: https://storage.appewa.com/api/v1/files/...
+
+### Frequency
+User: "Какое слово чаще используется — building или edifice?"
+→ Get both words, compare `frequency`:
+  - building: 165.27
+  - edifice: lower
+→ building используется значительно чаще
+
+### Batch word info
+User: "Дай инфу по этим словам: 580bca1a-..., 4d318c11-..."
+→ `Get_words_by_IDs(api_version="v2", wordIds=["580bca1a-0660-4a5a-a601-d92d7994157a","4d318c11-17b1-4f5f-922f-235ef10851b2"])`
+→ Returns 2 words: hello, building
+
+### Cross-service: exercises + words
+User: "Покажи упражнения урока X и дай полную инфу по словам"
+1. `get_lesson_exercises(lesson_id="...")` from `ewa-courses`
+2. Collect word UUIDs from vocabulary exercises
+3. `Get_words_by_IDs(api_version="v2", wordIds=[...])` from `ewa-words`
+4. Display exercises with full word cards
+
+### Compare translations across languages
+User: "Как переводится table на все языки?"
+→ `Get_word_by_origin(api_version="v2", origin="table", learningLanguage="en")`
+→ Iterate `meanings` to show all 41 language translations
+
+### Check if word exists
+User: "Есть ли слово supercalifragilistic в базе?"
+→ `Get_word_by_origin(api_version="v2", origin="supercalifragilistic", learningLanguage="en")`
+→ If 404 → word not found in the database
+
+### Batch resolve: list of words → IDs
+User: "Найди мне айдишники для английских слов hello, hi, bye, greeting"
+→ Call `Get_word_by_origin` for each word **in parallel**:
+  - `Get_word_by_origin(api_version="v2", origin="hello", learningLanguage="en")`
+  - `Get_word_by_origin(api_version="v2", origin="hi", learningLanguage="en")`
+  - `Get_word_by_origin(api_version="v2", origin="bye", learningLanguage="en")`
+  - `Get_word_by_origin(api_version="v2", origin="greeting", learningLanguage="en")`
+→ Collect `_id` from each, present as table. Mark 404 as "not found".
+→ No batch-by-text API exists — parallel single calls are the way.
+
+## Language codes
+
+Use ISO 639-1 codes for `learningLanguage` and `sourceLanguage`:
+
+| Code | Language   | Code | Language   | Code | Language     |
+|------|-----------|------|-----------|------|-------------|
+| `en` | English   | `fr` | French    | `ja` | Japanese    |
+| `ru` | Russian   | `de` | German    | `ko` | Korean      |
+| `es` | Spanish   | `it` | Italian   | `zh` | Chinese     |
+| `tr` | Turkish   | `pt` | Portuguese| `ar` | Arabic      |
+| `uk` | Ukrainian | `pl` | Polish    | `hi` | Hindi       |
+
+Full list includes 35+ languages. If unsure, try the code — the API will return data if the language is supported.

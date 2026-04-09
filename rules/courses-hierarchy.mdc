@@ -1,0 +1,133 @@
+---
+description: EWA course content hierarchy and data model
+globs:
+alwaysApply: true
+---
+
+# Course Content Hierarchy
+
+EWA courses are organized in a strict four-level hierarchy. Always navigate top-down.
+
+```
+Section  (раздел — e.g. "Survival English")
+  └── Unit  (юнит — e.g. "Greetings")
+        └── Lesson  (урок — e.g. "Hello & Goodbye")
+              └── Exercise  (упражнение — e.g. speechExercise "Say hello")
+```
+
+Grammar topics exist outside this hierarchy as a separate entity.
+
+## Entity relationships
+
+- `Unit.sectionId` → `Section._id`
+- `Lesson.unitId` → `Unit._id`
+- `Exercise.lessonId` → `Lesson._id`
+
+## Section
+
+Top-level grouping by theme and difficulty.
+
+| Field             | Type        | Description                              |
+|-------------------|-------------|------------------------------------------|
+| `_id`             | string      | UUID                                     |
+| `title`           | object      | Multilingual: `{ "en": "...", "ru": "..." }` |
+| `description`     | object      | Multilingual description                 |
+| `goalDescription` | object      | Multilingual learning goal               |
+| `learningLanguage`| string      | ISO code: `en`, `es`, `de`, etc.         |
+| `languageLevel`   | string      | `initial`, `beginner`, `elementary`, etc.|
+| `number`          | int         | Sort order within the course             |
+| `tags`            | string[]    | e.g. `["classic"]`                       |
+| `isReady`         | object      | Per-language readiness: `{ "en": true }` |
+| `isDeleted`       | bool        | Soft-delete flag                         |
+| `translationProgress` | int    | Percentage of translations completed     |
+
+## Unit
+
+Groups lessons within a section.
+
+| Field             | Type        | Description                              |
+|-------------------|-------------|------------------------------------------|
+| `_id`             | string      | UUID                                     |
+| `sectionId`       | string      | Parent section UUID                      |
+| `title`           | object      | Multilingual title                       |
+| `learningLanguage`| string      | ISO code                                 |
+| `number`          | int         | Sort order within section                |
+| `tags`            | string[]    | Tags                                     |
+| `isReady`         | object      | Per-language readiness                   |
+| `isDeleted`       | bool        | Soft-delete flag                         |
+| `translationProgress` | int    | Translation percentage                   |
+
+## Lesson
+
+Individual learning unit with exercises.
+
+| Field          | Type        | Description                                    |
+|----------------|-------------|------------------------------------------------|
+| `_id`          | string      | UUID                                           |
+| `unitId`       | string      | Parent unit UUID                               |
+| `title`        | object      | Multilingual title                             |
+| `kind`         | string      | Lesson type (see below)                        |
+| `cefrLevel`    | string      | CEFR: `Pre-A1`, `A1`, `A2`, `B1`, `B2`, `C1`  |
+| `cefrRange`    | string      | GSE range: `"22-29"`, `"43-58"`, etc.          |
+| `difficulty`   | string/int  | `easy`, `medium`, `hard`                       |
+| `status`       | string      | `draft`, `active`, `processing`, `history`     |
+| `topic`        | string      | e.g. `restaurant`, `airport_dog_check`, `food` |
+| `tags`         | string[]    | e.g. `["ai-generated", "grammar"]`             |
+| `isReady`      | object      | Per-language readiness                         |
+| `isDeleted`    | bool        | Soft-delete flag                               |
+| `unitNumber`   | int         | Number within unit                             |
+| `passScore`    | int         | Minimum score to pass                          |
+
+### Lesson kinds
+
+| Kind                | Description                          |
+|---------------------|--------------------------------------|
+| `common`            | Standard mixed exercises             |
+| `words`             | Vocabulary-focused                   |
+| `texts`             | Reading comprehension                |
+| `dialogues`         | Pre-scripted dialogue practice       |
+| `aiDialogue`        | AI-generated dialogue                |
+| `chatTests`         | Chat-based assessment                |
+| `vocabularyTests`   | Vocabulary quiz                      |
+| `languageLevelTests`| Placement / level test               |
+| `repeat`            | Review / spaced repetition           |
+
+## Exercise
+
+Atomic learning activity inside a lesson.
+
+| Field         | Type        | Description                                 |
+|---------------|-------------|---------------------------------------------|
+| `_id`         | string      | UUID                                        |
+| `lessonId`    | string      | Parent lesson UUID                          |
+| `type`        | string      | Exercise type (see below)                   |
+| `number`      | int         | Order within lesson (starts at 1)           |
+| `content`     | object      | Multilingual content: `{ "ru": { "hint": "...", "text": "..." } }` |
+| `word`        | string      | Word UUID reference (if vocabulary)         |
+| `isValid`     | object      | Per-language validation: `{ "ru": true }`   |
+| `isDeleted`   | bool        | Soft-delete flag                            |
+| `isRepeatable`| bool        | Can be repeated                             |
+| `isTesting`   | bool        | Included in test lesson                     |
+| `sample`      | string      | Audio sample UUID                           |
+| `videoUrl`    | string      | Resolved video URL                          |
+| `llmMetadata` | object      | AI generation metadata                      |
+
+Common exercise types: `speechExercise`, `composeWord`, `choosePicture`, `chooseTranslate`, `listenChoose`, `composePhrase`, `matchWords`, `fillGap`.
+
+## Grammar
+
+Standalone entity, not part of the section hierarchy. Linked to CEFR levels.
+
+| Field          | Type        | Description                              |
+|----------------|-------------|------------------------------------------|
+| `_id`          | string      | Code-based ID: `A1_G1`, `B2_G3`         |
+| `code`         | string      | Same as `_id`                            |
+| `name`         | string      | Topic name: `"BE-sentences"`             |
+| `cefr`         | string      | CEFR level: `A1`–`C2`                   |
+| `gseMin`       | int         | GSE range start (0–100)                  |
+| `gseMax`       | int         | GSE range end (0–100)                    |
+| `description`  | string      | What the topic covers                    |
+| `grammarRules` | string[]    | Rule identifiers                         |
+| `isActive`     | bool        | Active flag                              |
+| `order`        | int         | Sort order                               |
+| `tags`         | string[]    | e.g. `["a1", "a1_g1"]`                  |

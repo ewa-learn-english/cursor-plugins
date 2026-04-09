@@ -1,0 +1,16 @@
+{
+  "name": "ewa-courses",
+  "owner": {
+    "name": "EWA"
+  },
+  "metadata": {
+    "description": "EWA Content Studio — browse courses, look up words, plan units, generate exercises, translate content via MCP"
+  },
+  "plugins": [
+    {
+      "name": "ewa-courses",
+      "source": ".",
+      "description": "EWA Content Studio — browse courses, look up words, plan units, generate exercises, translate content via MCP"
+    }
+  ]
+}

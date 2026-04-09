@@ -1,0 +1,102 @@
+---
+description: EWA roadmap data model — how courses are assembled for the user
+globs:
+alwaysApply: true
+---
+
+# Roadmap Data Model
+
+The **roadmap** is the user-facing course structure in the EWA app. It is built from the same entities available through `courses-admin-api` tools, but assembled differently for the end user.
+
+## Roadmap vs Admin API
+
+| Aspect            | Roadmap (user-facing)               | Admin API (this plugin)                |
+|-------------------|--------------------------------------|----------------------------------------|
+| Audience          | Mobile app user                      | Content team / AI agent                |
+| Data shape        | Flat list with progress              | Hierarchical CRUD                      |
+| Lessons           | Only `isReady` + matching language   | All lessons, any status                |
+| Exercises         | Full content, resolved media URLs    | Metadata + content                     |
+| User progress     | Included (scores, completion)        | Not available                          |
+| Write operations  | None                                 | None (spec is read-only)               |
+
+## Data graph
+
+The roadmap assembles data top-down:
+
+```
+Section
+  └── Unit
+        └── Lesson
+              ├── LessonWord   (vocabulary items for the lesson)
+              ├── LessonPhrase (phrases / dialogues)
+              └── Exercise
+                    ├── Word    (linked word data)
+                    └── Sample  (audio sample → resolved URL)
+```
+
+### Section → Unit → Lesson
+
+Same entities as in the admin API hierarchy. The roadmap filters by:
+- `learningLanguage` matching user's learning language
+- `isDeleted = false`
+- `isReady[lang] = true` for the user's native language
+- Sorted by `number`
+
+### Lesson → LessonWord
+
+`LessonWord` connects lessons to vocabulary:
+- `lessonId` → parent lesson
+- `wordId` → `Word` entity (translations, transcription, audio, examples)
+- Each lesson can have 0–N words
+- Words are loaded separately from exercises
+
+### Lesson → LessonPhrase
+
+`LessonPhrase` holds dialogue lines and phrases:
+- `lessonId` → parent lesson
+- Contains text, translations, audio references
+- Used in `dialogues` and `aiDialogue` lesson kinds
+
+### Exercise → Word
+
+Exercises of vocabulary type reference a `Word` via `exercise.word` (UUID).
+The Word entity contains:
+- `origin` (the word itself)
+- `meanings` (per-language translations)
+- `transcription`
+- `audio` (pronunciation URL)
+- `examples` (usage sentences)
+
+### Exercise → Sample
+
+Exercises can reference an audio/video `Sample`:
+- `exercise.sample` → Sample UUID
+- Resolved to `exercise.videoUrl` at runtime
+- Used for listening exercises, video-based exercises
+
+## Key lesson kinds in roadmap
+
+| Kind           | What the user sees                    | Content source                |
+|----------------|---------------------------------------|-------------------------------|
+| `common`       | Mixed exercises (default)             | Manual + AI                   |
+| `words`        | Vocabulary drills                     | LessonWords                   |
+| `texts`        | Reading comprehension                 | LessonPhrases                 |
+| `dialogues`    | Pre-scripted dialogue practice        | LessonPhrases + Samples       |
+| `aiDialogue`   | AI-generated conversation             | LLM-generated at runtime      |
+| `chatTests`    | Chat-based level assessment           | Exercises (chat format)       |
+
+## CEFR / GSE mapping
+
+Lessons and grammar topics are tagged with CEFR levels and GSE (Global Scale of English) ranges:
+
+| CEFR | GSE Range | EWA languageLevel     |
+|------|-----------|------------------------|
+| Pre-A1 | 10–21   | `initial`              |
+| A1   | 22–29     | `beginner`             |
+| A2   | 30–42     | `elementary`           |
+| B1   | 43–58     | `preIntermediate`      |
+| B2   | 59–75     | `intermediate` / `upperIntermediate` |
+| C1   | 76–84     | `advanced`             |
+| C2   | 85–90     | `advanced`             |
+
+Use `list_grammar(cefr="A1")` or `list_grammar(gseMin=22, gseMax=29)` to explore grammar at a specific level.

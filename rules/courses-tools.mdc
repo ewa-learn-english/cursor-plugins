@@ -1,0 +1,215 @@
+---
+description: EWA Courses MCP tools reference — when and how to use each tool
+globs:
+alwaysApply: true
+---
+
+# Courses Admin API — MCP Tools
+
+All tools are **read-only** (GET). The OpenAPI spec is filtered to exclude write operations.
+
+MCP server: `ewa-courses` → `https://mcp.e2w2a.pro/courses-admin-api/mcp`
+
+## Navigation pattern
+
+Always navigate top-down through the hierarchy:
+
+1. `list_sections` → pick a section
+2. `list_units(section_id=...)` → pick a unit
+3. `list_lessons(unit_id=...)` → pick a lesson
+4. `get_lesson_exercises(lesson_id=...)` → see exercises
+
+Grammar is independent — use `list_grammar` / `get_grammar` directly.
+
+## Tools
+
+### list_sections
+
+List sections with optional filtering and pagination.
+
+| Parameter          | Type    | Required | Description                          |
+|--------------------|---------|----------|--------------------------------------|
+| `learning_language`| string  | no       | Filter by language: `en`, `es`, `de` |
+| `tag`              | string  | no       | Filter by tag: `classic`             |
+| `include_deleted`  | bool    | no       | Include soft-deleted sections        |
+| `skip`             | int     | no       | Pagination offset (default 0)        |
+| `limit`            | int     | no       | Max items (1–10000)                  |
+
+**When to use:** Starting point for exploring courses. Use `learning_language` to narrow down.
+
+**Examples:**
+- "Покажи все секции" → `list_sections()`
+- "Секции английского" → `list_sections(learning_language="en")`
+- "Секции с тегом classic" → `list_sections(tag="classic")`
+
+### get_section
+
+Get a single section by ID.
+
+| Parameter    | Type   | Required | Description    |
+|--------------|--------|----------|----------------|
+| `section_id` | string | yes      | Section UUID   |
+
+**When to use:** When you have a section ID and need full details.
+
+**Examples:**
+- "Дай инфу о секции 03541563-bbcf-4484-979b-0675c379c3c3" → `get_section(section_id="03541563-bbcf-4484-979b-0675c379c3c3")`
+- "Эта секция опубликована на русский?" → `get_section(...)`, check `isReady.ru`
+- "Какой прогресс перевода секции X?" → `get_section(...)`, check `translationProgress`
+
+### list_units
+
+List units with optional filtering and pagination.
+
+| Parameter            | Type   | Required | Description                          |
+|----------------------|--------|----------|--------------------------------------|
+| `section_id`         | string | no       | Filter by parent section             |
+| `include_deleted`    | bool   | no       | Include soft-deleted units           |
+| `skip`               | int    | no       | Pagination offset (default 0)        |
+| `limit`              | int    | no       | Max items (1–10000)                  |
+
+**When to use:** After picking a section. Always pass `section_id` to avoid loading all units across all sections.
+
+**Examples:**
+- "Юниты секции X" → `list_units(section_id="...")`
+
+### get_unit
+
+Get a single unit by ID.
+
+| Parameter | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `unit_id` | string | yes      | Unit UUID   |
+
+**When to use:** When you have a unit ID and need full details.
+
+**Examples:**
+- "Дай инфу о юните 03e8f471-bd4c-42c3-bf65-7fb0b23faccb" → `get_unit(unit_id="03e8f471-bd4c-42c3-bf65-7fb0b23faccb")`
+- "Опубликован ли этот юнит на русский? 03e8f471-bd4c-42c3-bf65-7fb0b23faccb" → `get_unit(...)`, check `isReady.ru`
+- "Название юнита X на испанском?" → `get_unit(...)`, check `title.es`
+- "К какой секции относится юнит X?" → `get_unit(...)`, check `sectionId`
+
+### list_lessons
+
+List lessons with optional filtering and pagination.
+
+| Parameter        | Type   | Required | Description                   |
+|------------------|--------|----------|-------------------------------|
+| `unit_id`        | string | no       | Filter by parent unit         |
+| `include_deleted`| bool   | no       | Include soft-deleted lessons  |
+| `skip`           | int    | no       | Pagination offset (default 0) |
+| `limit`          | int    | no       | Max items (1–10000)           |
+
+**When to use:** After picking a unit. Always pass `unit_id`.
+
+**Examples:**
+- "Уроки юнита X" → `list_lessons(unit_id="...")`
+- "Все уроки включая удалённые" → `list_lessons(unit_id="...", include_deleted=true)`
+
+### get_lesson
+
+Get a single lesson by ID.
+
+| Parameter   | Type   | Required | Description  |
+|-------------|--------|----------|--------------|
+| `lesson_id` | string | yes      | Lesson UUID  |
+
+**When to use:** When you have a lesson ID and need full details (title, kind, cefrLevel, tags, status).
+
+**Examples:**
+- "Дай инфу об уроке b0f1c5a0-9b2e-4b5f-9f2d-8f2b5b4a1c2d" → `get_lesson(lesson_id="b0f1c5a0-9b2e-4b5f-9f2d-8f2b5b4a1c2d")`
+- "Какой тип у этого урока?" → `get_lesson(...)`, check `kind`
+- "Этот урок опубликован на турецкий?" → `get_lesson(...)`, check `isReady.tr`
+- "Какой CEFR уровень урока X?" → `get_lesson(...)`, check `cefrLevel`
+- "Урок X в статусе draft или active?" → `get_lesson(...)`, check `status`
+- "Какой topic у урока?" → `get_lesson(...)`, check `topic`
+
+### get_lesson_exercises
+
+Get a lesson with all its exercises.
+
+| Parameter                 | Type   | Required | Description                    |
+|---------------------------|--------|----------|--------------------------------|
+| `lesson_id`               | string | yes      | Lesson UUID                    |
+| `includeDeletedExercises` | bool   | no       | Include soft-deleted exercises |
+
+**When to use:** To see all exercises in a lesson with their types, content, and order. Returns `exercises` array and `exercisesCount`.
+
+**Examples:**
+- "Покажи упражнения урока X" → `get_lesson_exercises(lesson_id="...")`
+- "Все упражнения, включая удалённые" → `get_lesson_exercises(lesson_id="...", includeDeletedExercises=true)`
+
+### get_exercise
+
+Get a single exercise by ID.
+
+| Parameter     | Type   | Required | Description    |
+|---------------|--------|----------|----------------|
+| `exercise_id` | string | yes      | Exercise UUID  |
+
+**When to use:** When you need details of a specific exercise — content, type, validation status.
+
+**Examples:**
+- "Дай инфу об упражнении 550e8400-e29b-41d4-a716-446655440000" → `get_exercise(exercise_id="550e8400-e29b-41d4-a716-446655440000")`
+- "Какой тип у упражнения X?" → `get_exercise(...)`, check `type`
+- "Это упражнение валидно на русском?" → `get_exercise(...)`, check `isValid.ru`
+- "Какой текст в упражнении?" → `get_exercise(...)`, check `content`
+- "К какому уроку относится это упражнение?" → `get_exercise(...)`, check `lessonId`
+
+### list_grammar
+
+List grammar topics with filtering, sorting, and pagination.
+
+| Parameter   | Type     | Required | Description                              |
+|-------------|----------|----------|------------------------------------------|
+| `cefr`      | string   | no       | CEFR level: `A1`, `A2`, `B1`, `B2`, `C1`, `C2` |
+| `gseMin`    | int      | no       | Minimum GSE score (0–100)                |
+| `gseMax`    | int      | no       | Maximum GSE score (0–100)                |
+| `isActive`  | bool     | no       | Filter by active status                  |
+| `tags`      | string[] | no       | Filter by tags (any match)               |
+| `sortBy`    | string   | no       | `code`, `name`, `cefr`, `order`, `created_at`, `updated_at` |
+| `sortOrder` | string   | no       | `asc` or `desc`                          |
+| `skip`      | int      | no       | Pagination offset (default 0)            |
+| `limit`     | int      | no       | Max items (1–100, default 50)            |
+
+**When to use:** To explore grammar topics independently of the course hierarchy.
+
+**Examples:**
+- "Грамматика уровня A1" → `list_grammar(cefr="A1")`
+- "Активные грамматические темы" → `list_grammar(isActive=true)`
+- "Грамматика с GSE 22-29" → `list_grammar(gseMin=22, gseMax=29)`
+
+### get_grammar
+
+Get a single grammar topic by ID.
+
+| Parameter    | Type   | Required | Description                     |
+|--------------|--------|----------|---------------------------------|
+| `grammar_id` | string | yes      | Grammar code: `A1_G1`, `B2_G3` |
+
+**When to use:** When you need full details of a grammar topic — rules, description, CEFR/GSE info.
+
+**Examples:**
+- "Дай инфу о грамматической теме A1_G1" → `get_grammar(grammar_id="A1_G1")`
+- "Какие правила в теме BE-sentences?" → `get_grammar(...)`, check `grammarRules`
+- "Эта тема активна?" → `get_grammar(...)`, check `isActive`
+- "Какой GSE диапазон у A1_G1?" → `get_grammar(...)`, check `gseMin`, `gseMax`
+
+## Checking publication status (isReady)
+
+Many entities have an `isReady` field — a multilingual object showing whether content is published for each language:
+
+```json
+{ "en": true, "ru": true, "es": false, "tr": true }
+```
+
+When the user asks "опубликован ли X на [язык]?" or "is X published for [language]?":
+1. Fetch the entity by ID using the appropriate `get_*` tool
+2. Check `isReady.[language_code]` — `true` means published, `false` or missing means not published
+
+## Important notes
+
+- All list endpoints support `skip` / `limit` pagination
+- `title`, `description`, `isReady` fields are multilingual objects: `{ "en": "...", "ru": "..." }`
+- `isDeleted` items are hidden by default; pass `include_deleted=true` to see them
+- Grammar IDs follow the pattern `{CEFR}_{topic}` (e.g. `A1_G1`)
