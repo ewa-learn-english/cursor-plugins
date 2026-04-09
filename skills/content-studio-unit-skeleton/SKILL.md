@@ -3,13 +3,13 @@ name: content-studio-unit-skeleton
 description: >-
   Builds and edits a Content Studio unit skeleton (no exercises). **Старт /
   параметры RU:** **«юнит план»**, **«заполни параметры юнита»**, **unit plan** —
-  мастер: title_en/title_ru, CEFR+GSE, grammar (ручной ввод), bag_of_words
-  (опц. lemma warnings). **Скелет уроков:** **`lessons plan`** / **«план
-  уроков»** / **«создай уроки»**; EN: generate unit skeleton, **«сгенерируй
-  скелет»** — fills
+  мастер: title_en/title_ru, CEFR+GSE, grammar (MCP **ewa-courses-admin**
+  **list_grammar** / **get_grammar** или вручную), bag_of_words (опц. lemma
+  warnings). **Скелет уроков:** **`lessons plan`** / **«план уроков»** / **«создай
+  уроки»**; EN: generate unit skeleton, **«сгенерируй скелет»** — fills
   skeleton.lessons (20–30). Rename/reorder lessons in **draft** — same skill.
-  unit-skeleton.draft.json. MCP **ewa-words** (lookup слов); грамматика пока без MCP
-  — вручную. Not **lessons fill** / exercises — use **content-studio-lesson-fill**.
+  unit-skeleton.draft.json. MCP **ewa-words** (lookup слов); **ewa-courses-admin**
+  (грамматика). Not **lessons fill** / exercises — use **content-studio-lesson-fill**.
 ---
 
 # Content Studio — Unit skeleton
@@ -53,10 +53,12 @@ Normalize into this object inside `unit-skeleton.draft.json`. The **core** field
 | `bag_of_word_ids` | no | string[] | В ногу с `bag_of_words`, если MCP вернул id слов; иначе опустить или `[]` |
 | `title_en` | yes | string | Unit theme, English |
 | `title_ru` | yes | string | Unit theme, Russian |
-| `grammar_blocks_list` | yes | string[] | Идентификаторы/лейблы блоков — **вручную** (вставка, comma-split) до появления grammar-MCP на бэке |
+| `grammar_blocks_list` | yes | string[] | Идентификаторы блоков из API грамматики (**см. ниже**) или ввод пользователя (paste / comma-split). **Не придумывать** строки, если заявлен MCP. |
 | `lemma_level_warnings` | no | array | See [Lemma level warnings](#lemma-level-warnings); omit or `[]` if none |
 
 If the user pastes `grammar_blocks_list` as a **comma-separated string**, split on commas, trim whitespace, and store as `string[]`.
+
+**`grammar_blocks_list` and MCP (`ewa-courses-admin`):** только **после** прохождения гейта CEFR+GSE. Вызови **`list_grammar`** с `cefr` = `cefr_lvl`, при необходимости `gseMin` / `gseMax` в духе юнита, `isActive: true`; пагинация `skip` / `limit` при длинном каталоге. По умолчанию клади в список юнита строки из **`grammarRules`** выбранных тем (объедини и **дедуплицируй**). Для одной темы по **`_id`** или **`code`** — **`get_grammar`** (`grammar_id`). Строки в `grammar_blocks_list` и в `targets.grammar_block_ids` на уроках должны **совпадать по смыслу** с этим списком. Если MCP недоступен или пользователь отказался — только ручной ввод.
 
 If the user pastes **`bag_of_words`** as comma-separated surface forms, split and trim. **With MCP (`ewa-words`):** для каждого токена вызывай **`Get_word_by_origin`** (или **`Get_word_by_ID`** / **`Get_words_by_IDs`**, если пользователь дал id); подставь каноническую форму в `bag_of_words`; **do not drop** solely for level mismatch — **warn** (see below). **Without MCP:** use the trimmed tokens as `bag_of_words` and note that resolution / automated warnings were skipped. Unresolved tokens (MCP on): ask or exclude with explanation.
 
@@ -86,9 +88,9 @@ Keep the chat line **compact** (one short clause per word). If MCP/metadata is m
 ## Workflow
 
 1. **Unit naming (mandatory, first)** — Collect **`title_en`** and **`title_ru`** for the unit. **Do not** ask for CEFR, GSE, grammar, or `bag_of_words` until both titles are set (user may return later to edit titles). Save to `unit-skeleton.draft.json` after this step.
-2. **Gate: CEFR and GSE** — The user **must** set **`cefr_lvl`**, **`gse_min`**, and **`gse_max`**. **Do not** call **`ewa-words`** MCP before this step completes and passes **Validation** under [Input: `parameters`](#input-parameters). If the user jumps ahead (e.g. words before level), **stop** and collect missing gate fields.
+2. **Gate: CEFR and GSE** — The user **must** set **`cefr_lvl`**, **`gse_min`**, and **`gse_max`**. **Do not** call **`ewa-words`** or **`ewa-courses-admin`** grammar tools (**`list_grammar`**, **`get_grammar`**) before this step completes and passes **Validation** under [Input: `parameters`](#input-parameters). If the user jumps ahead (e.g. words before level), **stop** and collect missing gate fields.
 3. **Grammar, then vocabulary** — Save the draft after substantive updates.
-   - **`grammar_blocks_list`:** **Без grammar-MCP** — только ввод пользователя: paste, comma-split или массив id/лейблов. (Когда бэкенд добавит MCP грамматики — см. [reference.md](reference.md).)
+   - **`grammar_blocks_list`:** с MCP — **`list_grammar`** / **`get_grammar`** на **`ewa-courses-admin`** (см. [reference.md](reference.md) и таблицу [Input: `parameters`](#input-parameters)). Без MCP — paste, comma-split или массив, как раньше.
    - **`bag_of_words`:** User types surface forms (no ids required). With MCP (**`ewa-words`**), resolve per [reference.md](reference.md) (**`Get_word_by_origin`** и т.д.). Apply **[Lemma level warnings](#lemma-level-warnings)** when metadata disagrees with the unit band; **do not** block generation. Without MCP, accept manual `string[]`.
 4. **Generate skeleton — `lessons plan` (separate intent)** — Produce `skeleton.lessons` (20–30 lessons inclusive) and set `skeleton.lesson_count` = `lessons.length` **only when** (a) all required `parameters` are present **and** (b) the user (or product) triggers generation under the **`lessons plan`** command family — e.g. **«lessons plan»**, **«план уроков»**, **«создай уроки»**, **«сгенерируй скелет»**, **«generate unit skeleton»**, **«запусти генерацию плана»**, or explicit **OK / Generate** after `bag_of_words`. **Do not** assume auto-generation immediately after saving words unless the same message clearly requests it.
 5. **Save draft** — Write the full file with `updatedAt` after each step above.
@@ -122,7 +124,7 @@ Use exactly these five `lesson_type` values (lowercase):
 
 - The unit **title** (`title_en` / `title_ru`) defines **one** coherent storyline; every lesson must fit that theme.
 - **Progression**: each `scenario` builds on earlier lessons; later lessons reflect accumulated context (progressive arc, not isolated episodes).
-- **`scenario`**: English only, 1–3 short sentences, learner-facing context.
+- **`scenario`**: на уровне **каждого урока** в `skeleton.lessons[]` (не отдельное поле «сценарий юнита» в `parameters`). English only, 1–3 short sentences, learner-facing context; задаёт опору для сценария урока вместе с `title_*` при последующей генерации упражнений (**lesson-fill**). Пустое значение — только если так договорено в продукте.
 - **Title rules** (preserve intent of legacy prompt):
   - `title_en`: 2–6 words, CEFR-appropriate.
   - `title_ru`: concise Russian equivalent.
@@ -143,7 +145,7 @@ Use exactly these five `lesson_type` values (lowercase):
 
 ## Grammar rules
 
-- Use **only** blocks from `grammar_blocks_list`. Represent each as an entry in `grammar_block_ids` (same strings as in the normalized list, after splitting commas if needed).
+- Use **only** blocks from `grammar_blocks_list` (из MCP — обычно элементы **`grammarRules`** каталога, см. [Input: `parameters`](#input-parameters)). Represent each as an entry in `grammar_block_ids` (same strings as in the normalized list, after splitting commas if needed).
 - Grammar blocks appear in **`grammar`** and **`lookback`** lessons only (`targets.grammar_block_ids`).
 - Introduce grammar **after** enough supportive vocabulary exists; increase difficulty gradually through the unit.
 
@@ -206,25 +208,54 @@ After the **first merge** of this unit into `roadmap.json`, **moving** words or 
 - Unit-level metadata: use schema field names `cefrLvl`, `gseMin`, `gseMax`, `bagOfWords`, `grammarBlocksList` under `units[].metadata`.
 - **Do not** generate exercises here; **do not** violate `roadmap.schema.json`.
 
-## MCP
+## Model Context Protocol (MCP)
 
-**`ewa-words`** — resolve vocabulary:
+**What it is:** [Model Context Protocol](https://docs.cursor.com/context/model-context-protocol) lets the Agent call **tools** from MCP servers (stdio or SSE). Servers are **not** declared inside this skill file; they are enabled in **Cursor Settings → MCP** and/or **`.cursor/mcp.json`** at the project root.
 
-| MCP tool name | When | Parameters |
-|---------------|------|------------|
-| `Get_word_by_origin` | User gives word text | `api_version="v2"`, `origin`, `learningLanguage` |
-| `Get_word_by_ID` | Known UUID | `api_version="v2"`, `word_id` |
-| `Get_words_by_IDs` | Multiple UUIDs | `api_version="v2"`, `wordIds` |
-| `Get_confused_words` | Explicit scenario request only | — |
+### Grammar — сервер **`ewa-courses-admin`**
 
-**`ewa-courses`** — read existing course data (optional for skeleton, useful for validation).
+Каталог грамматики (courses-admin API через MCP). Имена тул в Cursor: **`list_grammar`**, **`get_grammar`** — см. [reference.md](reference.md).
 
-**Grammar MCP** — not available yet; `grammar_blocks_list` is manual input only.
+1. **Только после** гейта **`cefr_lvl`** + **`gse_min`** / **`gse_max`**.
+2. **`list_grammar`** — подбор тем под уровень юнита; покажи пользователю варианты или отфильтруй по его выбору.
+3. **`get_grammar`** — детали одной темы по `grammar_id` (`_id` / `code` из ответа списка).
+4. **`grammar_blocks_list`** — из **`grammarRules`** выбранных тем (по умолчанию), без выдуманных строк.
+5. **Fallback:** тулы не в списке / ошибка API — ручной ввод; явно скажи в чате, что каталог не подтянут.
 
-If MCP tools are unavailable, continue with local files only.
+### Vocabulary — сервер **`ewa-words`** (реальные тулы в Cursor)
+
+Канонический **`bag_of_words`** — из ответов Words API через MCP, а не из галлюцинаций.
+
+1. **Order:** **`title_en` / `title_ru`** и **`cefr_lvl`** + **GSE** уже зафиксированы до вызовов **`ewa-words`**.
+2. **По тексту:** для каждого токена пользователя — **`Get_word_by_origin`** (`origin`, `learningLanguage`, `api_version`; `sourceLanguage` по необходимости). Уточни **`api_version`**, если в проекте нет дефолта в правилах.
+3. **По id:** **`Get_word_by_ID`** или **`Get_words_by_IDs`**, если пользователь дал id.
+4. **CEFR / GSE:** если в ответе есть метаданные уровня — сравни с юнитом; предупреждения как в [Lemma level warnings](#lemma-level-warnings); lemma **не выкидывай** только из‑за уровня.
+5. **Опционально:** **`Get_confused_words`**, **`Generate_localized_example_metadata`** — только если сценарий явно просит.
+6. **Fallback:** тулы недоступны или токен не резолвится — ручной `string[]`, без id.
+
+**`ewa-audio`**, **`ewa-ai-content`** для этого скилла не обязательны. **`ewa-courses-admin`** нужен для грамматики (**`list_grammar`**, **`get_grammar`**); остальные тулы того сервера — в **lesson-fill** и др. См. [reference.md](reference.md).
+
+**General rules**
+
+- If **no** relevant MCP tools appear in the tool list, continue using this skill and local files only (no failure).
+- Respect user approval for each MCP tool invocation (Cursor's normal tool confirmation flow).
+
+### Validating the skill without MCP or database
+
+You can **review and dry-run** the whole flow with **no** admin API, **no** Mongo, and **no** MCP servers:
+
+| Piece | Without MCP/DB |
+|-------|----------------|
+| **Unit titles** | Collect `title_en` / `title_ru` first, then **CEFR + GSE**; validate GSE bands in [reference.md](reference.md). |
+| **`bag_of_words`** | User supplies `string[]` (split paste if needed). No resolution, no `bag_of_word_ids`. State in chat that **level warnings were not applied** (no metadata). |
+| **`grammar_blocks_list`** | User paste or **mock numbered list** (when MCP is disabled for a dry run). |
+| **`lemma_level_warnings`** | Omit or `[]`. |
+| **Skeleton + `unit-skeleton.draft.json`** | Full rules apply; merge section unchanged. |
+
+So: **contract and workflow are testable offline**; без MCP **grammar** и **words** — ручной ввод; с MCP — **`ewa-courses-admin`** (грамматика) и **`ewa-words`** (слова + предупреждения уровня).
 
 ## Related assets
 
-- Segment list, kind mapping, GSE bands: [reference.md](reference.md)
+- Segment list, kind mapping, optional MCP tool list: [reference.md](reference.md)
 - Exercise JSON shapes: `.cursor/rules/content-studio.mdc`
 - Full roadmap shape: `roadmap.schema.json`

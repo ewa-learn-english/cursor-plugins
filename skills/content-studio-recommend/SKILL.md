@@ -12,6 +12,12 @@ description: >-
 
 Help editors brainstorm and plan content by suggesting structured ideas they can choose from.
 
+## Relation to other skills (do not duplicate full pipelines)
+
+- **`content-studio-unit-skeleton`** — единственный скилл для **полного скелета юнита** (20–30 уроков, `parameters`, `skeleton.lessons[]`, педагогические правила, merge в `roadmap.json`).
+- **`content-studio-lesson-fill`** — наполнение уроков **упражнениями** по уже готовому скелету / roadmap.
+- **Этот скилл** даёт **идеи и черновые наброски**; финальная структура JSON и мердж — **не здесь**, а в скиллах выше по согласованию с пользователем.
+
 ## When to Activate
 
 - Editor asks what to add, what topic to pick, what exercises to create
@@ -44,7 +50,11 @@ Before suggesting, check:
 
 ### Step 3 — Present Options as a Numbered List
 
-Always present suggestions as a **numbered list** so the editor can pick by number:
+Always present suggestions as a **numbered list** so the editor can pick by number. Use this format:
+
+---
+
+**FORMAT FOR SUGGESTIONS:**
 
 > **[Scope description]** — [Level/Context]
 >
@@ -58,14 +68,20 @@ Always present suggestions as a **numbered list** so the editor can pick by numb
 >
 > Or tell me a direction and I'll suggest more.
 
-### Step 4 — Generate Content
+---
+
+### Step 4 — Hand off to the right skill (no full unit skeleton here)
 
 Once the editor picks an option:
-- Generate the full JSON structure following `content-studio.mdc` rules
-- Include all required languages (check existing content for which languages are used)
-- Follow exercise numbering and ID conventions
+
+- **Не генерируй** полный скелет юнита (20–30 уроков, полный `unit-skeleton.draft.json`) внутри этого скилла — на это есть **`content-studio-unit-skeleton`** (`unit plan` / `lessons plan`).
+- **Не генерируй** полный набор упражнений для roadmap — на это **`content-studio-lesson-fill`** (`lessons fill` / `lesson fill`).
+- Здесь уместно: уточнить выбор, дать **краткий план** или **фрагменты** (например идеи названий, список тем), и **явно предложить** следующий шаг: запустить **unit-skeleton**, затем при готовности — **lesson-fill**.
+- Если нужен **один пример упражнения** в духе `content-studio.mdc` для иллюстрации — можно; это не замена массовой генерации в **lesson-fill**.
 
 ## CEFR Topic Guidelines
+
+Use these as inspiration. Adapt to the specific unit context.
 
 ### A1 — Beginner (GSE 10-29)
 
@@ -107,51 +123,112 @@ Once the editor picks an option:
 
 ### A2 — Elementary (GSE 30-35)
 
-**Vocabulary:** Travel and transport, Jobs, House and furniture, City, Health, Sports, Technology, Emotions.
+**Vocabulary units:**
+- Travel and transport (airport, train, ticket)
+- Jobs and professions
+- House and furniture
+- City and neighborhood
+- Health and body
+- Sports and activities
+- Technology (phone, computer, internet)
+- Emotions and feelings
 
-**Grammar:** Past simple, Future (going to / will), Comparatives/superlatives, Present continuous, Modals (must/should/have to), Adverbs of frequency, Countable/Uncountable, Past continuous.
+**Grammar units:**
+- Past simple (regular and irregular verbs)
+- Future with "going to" and "will"
+- Comparatives and superlatives
+- Present continuous
+- Modals: must, should, have to
+- Adverbs of frequency (always, never, sometimes)
+- Countable / Uncountable nouns
+- Past continuous
 
-**Communicative:** Past events, Plans, Advice, Descriptions, Storytelling, Complaints, Phone conversations, Writing emails.
+**Communicative units:**
+- Talking about past events
+- Making plans and arrangements
+- Giving advice
+- Describing people and places
+- Telling a story
+- Making complaints
+- Phone conversations
+- Writing an email/message
 
 ### B1 — Intermediate (GSE 36-50)
 
-**Vocabulary:** Work/career, Environment, Media/news, Education, Culture, Science/technology.
+**Vocabulary units:**
+- Work and career
+- Environment and nature
+- Media and news
+- Education and learning
+- Culture and traditions
+- Science and technology
 
-**Grammar:** Present perfect, Conditionals (0/1/2), Passive voice, Relative clauses, Reported speech, Used to / Would, Gerunds and infinitives.
+**Grammar units:**
+- Present perfect (experience, duration)
+- Conditionals (zero, first, second)
+- Passive voice
+- Relative clauses (who, which, that)
+- Reported speech
+- Used to / Would (past habits)
+- Gerunds and infinitives
 
-**Communicative:** Job interview, Opinions, Narrating experiences, Formal/informal register, Presentations, Negotiations.
+**Communicative units:**
+- Job interview
+- Discussing opinions
+- Narrating experiences
+- Formal vs informal register
+- Presentations and public speaking
+- Negotiations and compromises
 
 ### B2 — Upper-Intermediate (GSE 51-66)
 
-**Vocabulary:** Business/economics, Law/politics, Arts/literature, Psychology/behavior.
+**Vocabulary units:**
+- Business and economics
+- Law and politics
+- Arts and literature
+- Psychology and behavior
 
-**Grammar:** Third conditional, Mixed conditionals, Advanced passive, Inversion, Cleft sentences, Wish / If only.
+**Grammar units:**
+- Third conditional
+- Mixed conditionals
+- Advanced passive (have something done)
+- Inversion
+- Cleft sentences
+- Wish / If only
 
 ## Lesson Plan Templates
 
+When suggesting lessons for a unit, follow this pattern:
+
 ### Vocabulary Unit (kind: words)
+Standard structure: 3-4 lessons
 1. **Words: [Core vocabulary]** (kind: `words`) — introduce 6-8 key words
-2. **Grammar: [Related grammar]** (kind: `common`) — grammar that uses the vocabulary
+2. **Grammar: [Related grammar point]** (kind: `common`) — grammar that uses the vocabulary
 3. **Practice: [Situational practice]** (kind: `common`) — combine words + grammar in context
 4. **Dialogue: [Real-life scenario]** (kind: `common`) — conversational practice
 
 ### Grammar Unit
-1. **Explanation: [Rule introduction]** (kind: `common`) — explain the grammar rule
+Standard structure: 3-4 lessons
+1. **Grammar focus: [Rule introduction]** (kind: `common`) — ввод правила (название урока; не путать с типом упражнения `explain` в проде)
 2. **Words: [Related vocabulary]** (kind: `words`) — vocabulary used in examples
 3. **Practice: [Drills and exercises]** (kind: `common`) — apply the rule
 4. **Reading: [Text with target grammar]** (kind: `texts`) — comprehension + grammar in context
 
 ## Exercise Mix Recommendations
 
+For a balanced lesson, suggest this exercise distribution:
+
 | Lesson kind | Recommended exercise types |
 |-------------|---------------------------|
-| `words` | explain → chooseAnswerByText → composeWord → chooseMissedLetter → speechExercise |
-| `common` | explain → chooseAnswerByText → composePhraseByText → composeSentence → speechExercise |
-| `texts` | explain → textWithChooseAnswers → chooseAnswerByText → composePhraseByText → composeSentence |
+| `words` | `explain` → chooseAnswerByText → composeWord → chooseMissedLetter → speechExercise |
+| `common` (грамматика / практика без отдельного словарного урока) | chooseAnswerByText → composePhraseByText → composeSentence → speechExercise — **без** ведущего `explain`, если так задано в промптах бэка |
+| `texts` | textWithChooseAnswers → chooseAnswerByText → composePhraseByText → composeSentence (при необходимости `explain` — по продукту) |
 
-5-7 exercises per lesson is the sweet spot. Always start with `explain`.
+5–7 exercises per lesson is a typical range. **Ведущий `explain`** уместен для уроков **лексики (`words`)**; для **`common`** ориентируйся на правила генерации на сервере, не копируй слепо строку из колонки `words`.
 
 ## Roadmap Skeleton Template
+
+When suggesting a full roadmap skeleton, use this outline format:
 
 ```
 Section: [Level Name] (languageLevel: initial/elementary/...)

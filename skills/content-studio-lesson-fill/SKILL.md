@@ -27,8 +27,8 @@ Generate **exercises** inside lessons. **Do not** change the unit's lesson list,
 
 Read as needed:
 
-- `unit-skeleton.draft.json` — `parameters`, `skeleton.lessons[]` (`index`, `lesson_type`, `title_en` / `title_ru`, `scenario`, `targets`).
-- `roadmap.json` — when lessons/units already exist; align `_id`, `kind`, `number`, `unitId`.
+- **`unit-skeleton.draft.json`** — единственный полный источник **параметров юнита** и **per-lesson** полей: `title_*`, **`scenario`**, **`targets`**, `lesson_type`, `index`. Именно отсюда берётся контракт для генерации упражнений (сценарий + тайтлы + цели урока).
+- **`roadmap.json`** — когда юнит/уроки уже в прод-форме: **`_id`**, **`kind`**, **`number`**, **`unitId`**, связь с упражнениями. У **`Lesson`** в **`roadmap.schema.json` нет `targets` и `scenario`**; не ищи там «эквивалент» целей урока — опора на черновик скелета (или на ваш sidecar контента), а roadmap — для идентификаторов и вида урока в схеме.
 
 Backend **LLM Pydantic** models and **`unit-lessons-content.draft.json`** layout are documented in [reference.md](reference.md). Map outputs to **`roadmap.schema.json`** and **`content-studio.mdc`**.
 
@@ -44,7 +44,7 @@ Backend **LLM Pydantic** models and **`unit-lessons-content.draft.json`** layout
 
 ### A — `lessons fill` (all lessons)
 
-1. Confirm `unit-skeleton.draft.json` has a non-empty `skeleton.lessons` (or equivalent list in roadmap for the unit).
+1. Confirm **`unit-skeleton.draft.json`** has a non-empty **`skeleton.lessons`** (список уроков с **`targets`** / **`scenario`** в roadmap **не дублируется** — без черновика скелета контракта на урок нет).
 2. Iterate lessons in ** ascending `index` / teaching order**.
 3. For each lesson, build the per-lesson **contract** from `targets` + `lesson_type` + `title_*` + `scenario` + unit-level `parameters` (`cefr_lvl`, `gse_min`, `gse_max` from parent parameters).
 4. Generate exercises following **pedagogy** and **validation** below.
@@ -62,7 +62,9 @@ Backend **LLM Pydantic** models and **`unit-lessons-content.draft.json`** layout
 
 ## Pedagogy (per lesson)
 
-1. **Order of exercise types:** **explain** (or explain-style) **first**, then **choose-*** types, then other allowed types as appropriate.
+1. **Order of exercise types** (согласуй с бэкендом; **тексты промптов** живут в **LangSmith / пайплайне на сервере**, не в этом репозитории):
+   - Уроки **`words`** (`lesson_type` / фокус лексики): обычно **сначала `explain`** (фокус **word**), затем **`choose-*`**, затем остальные допустимые типы.
+   - Уроки **грамматики / лукбэка** (`grammar`, `lookback` → в roadmap часто `kind`: `common`): **не** задавай правило «обязательно начать с `explain`» — для них порядок и набор типов задаёт **продуктовый промпт / `LLMLessonStructureResponse`** (в т.ч. без ведущего `explain`, если так на бэке).
 2. **Vocabulary:** use **only** lemmas from that lesson's `targets` (`bag_of_words` / `words`); **no** new headwords outside the bag for that lesson.
 3. **Grammar:** only `grammar_block_ids` / grammar list from `targets` for grammar/lookback lessons.
 
@@ -75,7 +77,7 @@ Backend **LLM Pydantic** models and **`unit-lessons-content.draft.json`** layout
 ## Validation
 
 - After LLM output, **validate** structure against `roadmap.schema.json` and **content-studio.mdc** (required fields per `type`).
-- Optional: MCP **`ewa-courses`** — `get_unit`, `list_units`, `get_section`, `list_sections`, `get_lesson`, `list_lessons`, `get_lesson_exercises`, `get_exercise` (сверка с прод-контрактом, чтение эталона).
+- Optional: MCP **`ewa-courses-admin`** — `get_unit`, `list_units`, `get_section`, `list_sections`, `get_lesson`, `list_lessons`, `get_lesson_exercises`, `get_exercise` (сверка с прод-контрактом, чтение эталона).
 
 ## Not in this skill
 
@@ -86,10 +88,10 @@ Backend **LLM Pydantic** models and **`unit-lessons-content.draft.json`** layout
 
 ## MCP (optional)
 
-- **`ewa-courses`**: read unit/lesson/exercises from admin — `get_unit`, `list_units`, `get_section`, `list_sections`, `get_lesson`, `list_lessons`, `get_lesson_exercises`, `get_exercise`.
-- **`ewa-words`**: resolve words — `Get_word_by_origin` / `Get_word_by_ID` / `Get_words_by_IDs`.
-- **`ewa-ai-content`** (`translate`): only if the product explicitly uses this API; otherwise local generation + schema validation.
-- **`ewa-audio`** (`generate_audio`): not for first text pass; media comes later.
+- **`ewa-courses-admin`**: при необходимости читать юнит/урок/упражнения из админки — тулы `get_unit`, `list_units`, `get_section`, `list_sections`, `get_lesson`, `list_lessons`, `get_lesson_exercises`, `get_exercise` (имена как в Cursor MCP). Конфиг: `.cursor/mcp.json`.
+- **`ewa-words`**: если нужно уточнить слово по тому же API, что и в unit-skeleton — `Get_word_by_origin` / `Get_word_by_ID` / `Get_words_by_IDs`.
+- **`ewa-ai-content`** (`translate`): только если продукт явно тянет текст через этот API; иначе локальная генерация + валидация по схеме.
+- **`ewa-audio`** (`generate_audio`): не первый проход текста; медиа — позже.
 
 ## Additional resources
 
